@@ -25,8 +25,7 @@
 		"rules" => array(
 			"suppressoutput" => array("arg" => false),
 			"help" => array("arg" => false)
-		),
-		"userinput" => "="
+		)
 	);
 	$args = CLI::ParseCommandLine($options);
 
@@ -57,7 +56,7 @@
 		"files" => "Access /files"
 	);
 
-	$cmdgroup = CLI::GetLimitedUserInputWithArgs($args, "cmdgroup", "Command group", false, "Available command groups:", $cmdgroups, true, $suppressoutput);
+	$cmdgroup = CLI::GetLimitedUserInputWithArgs($args, false, "Command group", false, "Available command groups:", $cmdgroups, true, $suppressoutput);
 
 	// Get the command.
 	switch ($cmdgroup)
@@ -66,7 +65,7 @@
 		case "files":  $cmds = array("list" => "List files and folders", "create-folder" => "Create a folder", "copy" => "Copy a file or folder", "move" => "Move a file or folder", "rename" => "Rename a file or folder", "list-trash" => "List all items in the trash", "trash" => "Move a file or folder to the trash", "restore" => "Restore a file or folder from the trash", "delete" => "Delete a file or folder", "get-limits" => "Get information about user limits for uploads/downloads", "upload" => "Upload a file or folder", "download" => "Download a file or folder", "list-guests" => "List guests", "create-guest" => "Create a guest", "delete-guest" => "Delete a guest");  break;
 	}
 
-	$cmd = CLI::GetLimitedUserInputWithArgs($args, "cmd", "Command", false, "Available commands:", $cmds, true, $suppressoutput);
+	$cmd = CLI::GetLimitedUserInputWithArgs($args, false, "Command", false, "Available commands:", $cmds, true, $suppressoutput);
 
 	// Make sure directories exist.
 	@mkdir($rootpath . "/css-profiles", 0700);
@@ -143,6 +142,8 @@
 		if ($cmd === "list")  DisplayResult(CSSProfilesList());
 		else if ($cmd === "create")
 		{
+			CLI::ReinitArgs($args, array("name", "host", "apikey"));
+
 			do
 			{
 				$name = CLI::GetUserInputWithArgs($args, "name", "Cloud Storage Server profile name", false, "", $suppressoutput);
@@ -188,6 +189,8 @@
 		}
 		else
 		{
+			CLI::ReinitArgs($args, array("profile"));
+
 			$name = GetCSSProfileName();
 			$filename = $rootpath . "/css-profiles/" . $name . ".json";
 			$cafile = $rootpath . "/css-profiles/" . $name . ".ca.pem";
@@ -248,6 +251,18 @@
 	}
 	else
 	{
+		if ($cmdgroup ==="files")
+		{
+			if ($cmd === "list" || $cmd === "create-folder" || $cmd === "trash" || $cmd === "delete")  CLI::ReinitArgs($args, array("profile", "path"));
+			else if ($cmd === "copy" || $cmd === "move")  CLI::ReinitArgs($args, array("profile", "src", "dest"));
+			else if ($cmd === "rename")  CLI::ReinitArgs($args, array("profile", "path", "name"));
+			else if ($cmd === "restore")  CLI::ReinitArgs($args, array("profile", "item"));
+			else if ($cmd === "upload" || $cmd === "download")  CLI::ReinitArgs($args, array("profile", "src", "dest", "diff", "delete"));
+			else if ($cmd === "create-guest")  CLI::ReinitArgs($args, array("profile", "path", "read", "write", "delete", "expires"));
+			else if ($cmd === "delete-guest")  CLI::ReinitArgs($args, array("profile", "guest"));
+			else  CLI::ReinitArgs($args, array("profile"));
+		}
+
 		// Load a profile.
 		$name = GetCSSProfileName();
 		$filename = $rootpath . "/css-profiles/" . $name . ".json";
@@ -256,11 +271,11 @@
 
 		$data = json_decode(file_get_contents($filename), true);
 
-		$css = new CloudStorageServerFiles();
-		$css->SetAccessInfo($data["host"], $data["apikey"], (file_exists($cafile) ? $cafile : false), (file_exists($certfile) ? file_get_contents($certfile) : false));
-
 		if ($cmdgroup === "files")
 		{
+			$css = new CloudStorageServerFiles();
+			$css->SetAccessInfo($data["host"], $data["apikey"], (file_exists($cafile) ? $cafile : false), (file_exists($certfile) ? file_get_contents($certfile) : false));
+
 			// Cloud Storage Server /files.
 			if ($cmd === "list")
 			{
