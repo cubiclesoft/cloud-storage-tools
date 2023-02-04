@@ -1,6 +1,6 @@
 <?php
 	// Cloud Storage Server SDK API base class.
-	// (C) 2018 CubicleSoft.  All Rights Reserved.
+	// (C) 2023 CubicleSoft.  All Rights Reserved.
 
 	// This is the common base class for building a Cloud Storage Server SDK.
 	class CloudStorageServer_APIBase
@@ -274,7 +274,7 @@
 			if (!$result["success"] && $this->fp !== false)
 			{
 				// If the server terminated the connection, then re-establish the connection and rerun the request.
-				@fclose($this->fp);
+				if (is_resource($this->fp))  @fclose($this->fp);
 				$this->fp = false;
 
 				return $this->RunAPI($method, $apipath, $options, $expected, $encodejson, $decodebody);
